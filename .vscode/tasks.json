@@ -1,0 +1,108 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/IMU_Attitude_Estimator_Ex.sln"
+            ],
+            "problemMatcher": "$msCompile"
+        }
+    ]
+}
+
+// {
+//     "tasks": [
+//         {
+//             "type": "shell",
+//             "label": "cl.exe build active file",
+//             "command": "cl.exe",
+//             "args": [
+//                 "/permissive-",
+//                 "/GS",
+//                 "/W3",
+//                 "/Gy",
+//                 "/Zc:wchar_t",
+//                 "/I",
+//                 "${workspaceFolder}/Include",
+//                 "/I",
+//                 "C:/ProgramData/Anaconda3/Lib/site-packages/numpy/core/include",
+//                 "/I",
+//                 "C:/ProgramData/Anaconda3/include",
+//                 "/Z7",
+//                 "/Gm-",
+//                 "/O2",
+//                 "/sdl",
+//                 "/Fd\\${workspaceFolder}/x64/Release/vc141.pdb",
+//                 "/Zc:inline",
+//                 "/fp:precise",
+//                 "/D\\NDEBUG",
+//                 "/D\\_CONSOLE",
+//                 "/D\\_CRT_SECURE_NO_WARNINGS",
+//                 "/D\\_UNICODE",
+//                 "/D\\UNICODE",
+//                 "/errorReport:prompt",
+//                 "/WX-",
+//                 "/Zc:forScope",
+//                 "/Gd",
+//                 "/Oi",
+//                 "/MD",
+//                 "/FC",
+//                 "/Fa",
+//                 "${workspaceFolder}/x64/Release/IMU_Attitude_Estimator_Ex.obj",
+//                 "/EHsc",
+//                 "/nologo",
+//                 "/diagnostics:classic",
+//                 "${workspaceFolder}/IMU_Attitude_Estimator_Ex.cpp",
+//                 "/OUT:",
+//                 "${workspaceFolder}/build/IMU_Attitude_Estimator_Ex.exe",
+//                 "/MANIFEST",
+//                 "/NXCOMPAT",
+//                 "/PDB:",
+//                 "${workspaceFolder}/build/IMU_Attitude_Estimator_Ex.pdb",
+//                 "/DEBUG",
+//                 "/MACHINE:X64",
+//                 "/OPT:REF",
+//                 "/INCREMENTAL:NO",
+//                 "/PGD:",
+//                 "${workspaceFolder}/build/IMU_Attitude_Estimator_Ex.pgd",
+//                 "/SUBSYSTEM:CONSOLE",
+//                 "/MANIFESTUAC:level=\\asInvoker",
+//                 "uiAccess=\\false",
+//                 "/ManifestFile:",
+//                 "${workspaceFolder}/x64/Release/IMU_Attitude_Estimator_Ex.exe.intermediate.manifest",
+//                 "/OPT:ICF",
+//                 "/ERRORREPORT:PROMPT",
+//                 "/NOLOGO",
+//                 "/LIBPATH:",
+//                 "${workspaceFolder}/libs/",
+//                 "/LIBPATH:",
+//                 "C:/ProgramData/Anaconda3/libs/",
+//                 "/DYNAMICBASE",
+//                 "Mahony_AHRS.lib",
+//                 "IMU_Attitude_Estimator.lib",
+//                 "kernel32.lib",
+//                 "user32.lib",
+//                 "gdi32.lib",
+//                 "winspool.lib",
+//                 "comdlg32.lib",
+//                 "advapi32.lib",
+//                 "shell32.lib",
+//                 "ole32.lib",
+//                 "oleaut32.lib",
+//                 "uuid.lib",
+//                 "odbc32.lib",
+//                 "odbccp32.lib",
+//                 "/TLBID:1"
+//             ],
+//             "group": {
+//                 "kind": "build",
+//                 "isDefault": true
+//             }
+//         }
+//     ],
+//     "version": "2.0.0"
+// }
