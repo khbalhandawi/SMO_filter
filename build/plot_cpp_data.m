@@ -14,7 +14,7 @@ lambda = 2;
 c = 15;
 
 n_delay = 0;
-n_memory = 42 ; %22 + n_delay;
+n_memory = 3 ; %22 + n_delay;
 n_postrack = 40;
 
 X = [c, lambda];

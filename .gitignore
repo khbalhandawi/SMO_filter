@@ -1,0 +1,12 @@
+
+*.ipch
+*.opendb
+*.db
+.vs/IMU_Attitude_Estimator_Ex/v15/.suo
+*.log
+*.exe
+*.pdb
+*.tlog
+*.obj
+*.bin
+*.txt

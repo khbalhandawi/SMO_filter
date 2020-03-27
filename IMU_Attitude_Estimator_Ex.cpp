@@ -167,14 +167,6 @@ int main(int argc, char* argv[])
 	integ_vel << 0.0, 0.0, 0.0; // initialize integrator
 	integ_pos << 0.0, 0.0, 0.0; // initialize integrator
 
-	//data_matlab = IMU::readFromfile("./datasets/euler_matlab.txt"); // make sure only LF not CR.LF at end of line !!!
-	//if (data_matlab.isZero())
-	//	return 0;
-
-	//Eigen::MatrixXd acc_i_matlab, Euler_matlab;
-	//acc_i_matlab = data_matlab.block(0, 0, data_matlab.rows(), 3);
-	//Euler_matlab = data_matlab.block(0, 3, data_matlab.rows(), 3);
-
 	data = IMU::readFromfile("./datasets/NAV3_data.bin"); // make sure only LF not CR.LF at end of line !!!
 	if (data.isZero())
 		return 0;
@@ -248,7 +240,6 @@ int main(int argc, char* argv[])
 		mahony_out = mahony_filter(&mahony_ahrs, acc_data, gyro_data);
 
 		acc_i.row(i) = mahony_out.block<1, 3>(0, 0);
-		//acc_i.row(i) = acc_i_matlab.row(i);
 		Euler.row(i) = mahony_out.block<1, 3>(1, 0);
 
 		// CH Boiko section
@@ -351,6 +342,14 @@ int main(int argc, char* argv[])
 	out_pos_RMS.close();
 	cout << "POS RMS Error: " << pos_err_RMS << endl;
 
+	double pos_err_DS_RMS = RMS_error(pos_est, groundtruth_pos_ds, error_indices);
+	ofstream out_pos_ds_RMS("POS_ERR_DS_RMS.txt");
+	out_pos_ds_RMS.precision(9); // number of decimal places to output
+	/*cout << tc.toc() << "ms" << endl;*/
+	out_pos_ds_RMS << fixed << pos_err_DS_RMS << endl;
+	out_pos_ds_RMS.close();
+	cout << "POS RMS DS Error: " << pos_err_DS_RMS << endl;
+
 	double vel_err_RMS = RMS_error(super_twist_vel, groundtruth_vel_true, error_indices);
 	ofstream out_vel_RMS("VEL_ERR_RMS.txt");
 	out_vel_RMS.precision(9); // number of decimal places to output
@@ -382,10 +381,6 @@ int main(int argc, char* argv[])
 			Pitch.push_back(Euler.row(i)[1]);
 			Yaw.push_back(Euler.row(i)[2]);
 
-			//Roll_matlab.push_back(Euler_matlab.row(i)[0]);
-			//Pitch_matlab.push_back(Euler_matlab.row(i)[1]);
-			//Yaw_matlab.push_back(Euler_matlab.row(i)[2]);
-
 			Roll_gt.push_back(groundtruth_true.row(i)[0]);
 			Pitch_gt.push_back(groundtruth_true.row(i)[1]);
 			Yaw_gt.push_back(groundtruth_true.row(i)[2]);
@@ -393,14 +388,6 @@ int main(int argc, char* argv[])
 			acc_i_x.push_back(acc_i.row(i)[0]);
 			acc_i_y.push_back(acc_i.row(i)[1]);
 			acc_i_z.push_back(acc_i.row(i)[2]);
-
-			//acc_i_matlab_x.push_back(acc_i_matlab.row(i)[0]);
-			//acc_i_matlab_y.push_back(acc_i_matlab.row(i)[1]);
-			//acc_i_matlab_z.push_back(acc_i_matlab.row(i)[2]);
-
-			//vel_est_x.push_back(vel_est.row(i)[0]);
-			//vel_est_y.push_back(vel_est.row(i)[1]);
-			//vel_est_z.push_back(vel_est.row(i)[2]);
 
 			vel_est_x.push_back(super_twist_vel.row(i)[0]);
 			vel_est_y.push_back(super_twist_vel.row(i)[1]);
@@ -496,60 +483,3 @@ int main(int argc, char* argv[])
 
 	return 0;
 }
-
-//// acceleration in the intertial frame estimation
-//plt::figure_size(1200, 500);
-
-//plt::subplot(1, 3, 1);
-//plt::named_plot("matlab", time, acc_i_matlab_x, "k");
-//plt::named_plot("cpp", time, acc_i_x, "r");
-//plt::legend();
-//plt::title("x");
-
-//plt::subplot(1, 3, 2);
-//plt::named_plot("matlab", time, acc_i_matlab_y, "k");
-//plt::named_plot("cpp", time, acc_i_y, "r");
-//plt::legend();
-//plt::title("y");
-
-//plt::subplot(1, 3, 3);
-//plt::named_plot("matlab", time, acc_i_matlab_z, "k");
-//plt::named_plot("cpp", time, acc_i_z, "r");
-//plt::legend();
-//plt::title("z");
-//// save figure
-//const char* filename_acc = "./acc_plot.pdf";
-//std::cout << "saving result to " << filename_acc << std::endl;;
-//plt::save(filename_acc);
-
-//// Mahony estimation
-//plt::figure_size(1200, 500);
-//plt::title("Roll pitch yaw comparision");
-//plt::subplot(1, 3, 1);
-//plt::named_plot("Mahony_cpp", time, Roll, "k");
-//plt::named_plot("Mahony_matlab", time, Roll_matlab, "r");
-
-////plt::xlim(0, total_units);
-//plt::title("Roll");
-//plt::legend();
-
-//plt::subplot(1, 3, 2);
-//plt::named_plot("Mahony_cpp", time, Pitch, "k");
-//plt::named_plot("Mahony_matlab", time, Pitch_matlab, "r");
-
-////plt::xlim(0, total_units);
-//plt::title("Pitch");
-//plt::legend();
-
-//plt::subplot(1, 3, 3);
-//plt::named_plot("Mahony_cpp", time, Yaw, "k");
-//plt::named_plot("Mahony_matlab", time, Yaw_matlab, "r");
-
-////plt::xlim(0, total_units);
-//plt::title("Yaw");
-//plt::legend();
-//plt::show();
-//// save figure
-//const char* filename_att = "./attitude_plot.pdf";
-//std::cout << "saving result to " << filename_att << std::endl;;
-//plt::save(filename_att);
