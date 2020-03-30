@@ -62,7 +62,7 @@ Eigen::MatrixXd chib_filter(const Vector_3 pos_est_current, const Vector_3 pos_t
 	Matrix_3 Rotation_matrix;
 
 	Vector_3 pos_err, pos_err_neg, relay, acc_est, acc_est_current,
-		vel_inc, vel_est, super_twist, super_twist_vel, st_vel_current, pos_inc, pos_est;
+		vel_inc, vel_est, super_twist, super_twist_vel, st_vel_current, pos_inc, pos_est, f_contribution;
 	
 
 	pos_err = pos_est_current - pos_true;
@@ -89,6 +89,7 @@ Eigen::MatrixXd chib_filter(const Vector_3 pos_est_current, const Vector_3 pos_t
 	// Super twisting algorithm
 	super_twist_vel = vel_est + (lambda * super_twist);
 	st_vel_current = super_twist_vel;
+	f_contribution = lambda * super_twist;
 
 	// Position calculations
 	pos_inc = (st_vel_prev + st_vel_current) / 2.0;
@@ -100,11 +101,12 @@ Eigen::MatrixXd chib_filter(const Vector_3 pos_est_current, const Vector_3 pos_t
 	super_twist_vel_out = super_twist_vel;
 	pos_est_out = pos_est;
 
-	Eigen::MatrixXd output(4, 3);
+	Eigen::MatrixXd output(5, 3);
 	output.row(0) = acc_est_out;
 	output.row(1) = vel_est_out;
 	output.row(2) = super_twist_vel_out;
 	output.row(3) = pos_est_out;
+	output.row(4) = f_contribution;
 
 	return output;
 	
@@ -133,6 +135,32 @@ double RMS_error(Eigen::MatrixXd pos_est, Eigen::MatrixXd groundtruth_pos_true, 
 	pos_err_RMS = pos_err_sum / (error_indices.size());
 
 	return pos_err_RMS;
+
+}
+
+double ABS_AVG(Eigen::MatrixXd signal, vector<int> error_indices) {
+
+	double pos_err_sum = 0.0, pos_err_ABS;
+
+	Eigen::MatrixXd signal_raw(1, 3);
+	Eigen::MatrixXd pos_err_abs(1, 3);
+	Eigen::MatrixXd pos_err_rsum(1, 1);
+
+	// Compute RMS error with respect to true position
+
+	for (size_t r = 0; r < error_indices.size(); ++r) {
+		int index = int(error_indices[r]);
+		signal_raw = signal.row(index); // This is commented and moved to inside the loop as we dont want to take cost at all time but only when we have a signal coming from the OptiTrack
+		
+		pos_err_abs = signal_raw.cwiseAbs();
+		
+		pos_err_rsum = pos_err_abs.rowwise().sum();
+		pos_err_sum += pos_err_rsum.sum();
+	}
+
+	pos_err_ABS = pos_err_sum / (error_indices.size());
+
+	return pos_err_ABS;
 
 }
 
@@ -189,6 +217,7 @@ int main(int argc, char* argv[])
 	Eigen::MatrixXd vel_est(measurements.rows(), 3);
 	Eigen::MatrixXd acc_est(measurements.rows(), 3);
 	Eigen::MatrixXd super_twist_vel(measurements.rows(), 3);
+	Eigen::MatrixXd f_contribution(measurements.rows(), 3);
 	Eigen::MatrixXd mahony_out;
 	Eigen::MatrixXd chib_out, chib_out_j;
 
@@ -211,8 +240,8 @@ int main(int argc, char* argv[])
 	gyro_data = gyroscope.row(i).transpose();//changed trans
 
 	mahony_out = mahony_filter(&mahony_ahrs, acc_data, gyro_data);
-	acc_i.row(i) = mahony_out.block<1, 3>(0, 0);
-	//acc_i.row(i) = acc_i_matlab.row(i);
+	//acc_i.row(i) = mahony_out.block<1, 3>(0, 0);
+	acc_i.row(i) = acceleration.row(i);
 	Euler.row(i) = mahony_out.block<1, 3>(1, 0);
 	
 	acc_est.row(i) = acc_i.row(i);
@@ -239,7 +268,8 @@ int main(int argc, char* argv[])
 		//  Mahony section
 		mahony_out = mahony_filter(&mahony_ahrs, acc_data, gyro_data);
 
-		acc_i.row(i) = mahony_out.block<1, 3>(0, 0);
+		//acc_i.row(i) = mahony_out.block<1, 3>(0, 0);
+		acc_i.row(i) = acceleration.row(i);
 		Euler.row(i) = mahony_out.block<1, 3>(1, 0);
 
 		// CH Boiko section
@@ -255,11 +285,21 @@ int main(int argc, char* argv[])
 		vel_est.row(i) = chib_out.block<1, 3>(1, 0);
 		super_twist_vel.row(i) = chib_out.block<1, 3>(2, 0);
 		pos_est.row(i) = chib_out.block<1, 3>(3, 0);
+		f_contribution.row(i) = chib_out.block<1, 3>(4, 0);
 
 		//calculate the error every IMU iteration
 		error_indices.push_back(i);
 
-		if ( (i+1) % n_postrack == 1 && i >= n_postrack)
+		bool trigger;
+		if (i == 0) {
+			trigger = false;
+		}
+		else {
+			trigger = (abs(groundtruth_pos_ds.row(i)[1] - groundtruth_pos_ds.row(i - 1)[1])) >= 1e-4;
+			//trigger = ((i + 1) % n_postrack == 1 && i >= n_postrack);
+		}
+
+		if (trigger) // trigger anti-delay function
 		{
 			//i: 0 1 2 3 4 5 6 7
 			//i + 1 : 1 2 3 4 5 6 7 8
@@ -304,7 +344,7 @@ int main(int argc, char* argv[])
 				vel_est.row(j) = chib_out_j.block<1, 3>(1, 0);
 				super_twist_vel.row(j) = chib_out_j.block<1, 3>(2, 0);
 				pos_est.row(j) = chib_out_j.block<1, 3>(3, 0);
-				
+				f_contribution.row(j) = chib_out_j.block<1, 3>(4, 0);
 
 				j++;
 
@@ -357,6 +397,14 @@ int main(int argc, char* argv[])
 	out_vel_RMS << fixed << vel_err_RMS << endl;
 	out_vel_RMS.close();
 	cout << "VEL RMS Error: " << vel_err_RMS << endl;
+
+	double f_cont_abs = ABS_AVG(f_contribution, error_indices);
+	ofstream out_Fcont_ABS("F_CONT_ABS.txt");
+	out_Fcont_ABS.precision(9); // number of decimal places to output
+	/*cout << tc.toc() << "ms" << endl;*/
+	out_Fcont_ABS << fixed << f_cont_abs << endl;
+	out_Fcont_ABS.close();
+	cout << "F CONT Absolute: " << f_cont_abs << endl;
 
 	bool post_process = true;
 	bool plot_command = false;
