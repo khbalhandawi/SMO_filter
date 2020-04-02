@@ -18,8 +18,8 @@ lambda = 2;
 c = 15;
 
 n_delay = 20;
-n_memory = 61 ; %22 + n_delay;
-n_postrack = 80;
+n_memory = 30 ; %22 + n_delay;
+n_postrack = 0;
 
 X = [c, lambda];
 param = {1,n_postrack,n_memory};
@@ -146,7 +146,7 @@ groundtruth_vel_true = data(range,[22 23 24]);
 fig2 = figure('Name', 'Position');
 hold on;
 est_h = plot(time_raw, pos_est_cpp(:,2), '-r', 'linewidth',1.5);
-% ds_h = plot(time_raw, groundtruth_pos_ds(:,2), '-g', 'linewidth',1.5);
+ds_h = plot(time_raw, groundtruth_pos_ds(:,2), '-g', 'linewidth',1.5);
 true_h = plot(time_raw, groundtruth_pos_true(:,2), '-k', 'linewidth',1.5);
 xlabel('Time (s)','interpreter','latex');
 ylabel('y (m)','interpreter','latex');
@@ -188,8 +188,8 @@ for par = 1:1:1
     
 end
 
-legend_items = [est_h true_h];
-legend_entries = [{'Estimated Position'}, {'True Position'}];
+legend_items = [est_h ds_h true_h];
+legend_entries = [{'Estimated Position'}, {'Downsampled_position'}, {'True Position'}];
 
 lh = legend(legend_items,legend_entries,'Orientation','vertical');
 % lh = legend([h_obj lc_h],[title_obj label_lc],'Orientation','horizontal');

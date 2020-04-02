@@ -62,15 +62,15 @@ Eigen::MatrixXd chib_filter(const Vector_3 pos_est_current, const Vector_3 pos_t
 	Matrix_3 Rotation_matrix;
 
 	Vector_3 pos_err, pos_err_neg, relay, acc_est, acc_est_current,
-		vel_inc, vel_est, super_twist, super_twist_vel, st_vel_current, pos_inc, pos_est, f_contribution;
+		vel_inc, vel_est, super_twist, super_twist_vel, st_vel_current, pos_inc, pos_est;
 	
 
 	pos_err = pos_est_current - pos_true;
 	pos_err_neg = pos_err * -1;
 
 	// Acceleration calculations
-	relay = pos_err_neg.cwiseSign(); 
-	acc_est = acc_i_raw + (c * relay);
+	relay = c * pos_err_neg.cwiseSign();
+	acc_est = acc_i_raw + relay;
 	acc_est_current = acc_est;
 
 		
@@ -81,15 +81,15 @@ Eigen::MatrixXd chib_filter(const Vector_3 pos_est_current, const Vector_3 pos_t
 
 	// Lipshitchz discontinous function
 	// cwisesqrt instead of pow(p/q)!!
-	super_twist = pos_err_neg.cwiseAbs().cwiseSqrt().cwiseProduct(pos_err_neg.cwiseSign()); // CHECK SIGNUM FUNTION -1,0,1 or 0,1
+	super_twist = lambda * pos_err_neg.cwiseAbs().cwiseSqrt().cwiseProduct(pos_err_neg.cwiseSign()); // CHECK SIGNUM FUNTION -1,0,1 or 0,1
 
 	// Linear function
 	//super_twist = pos_err_neg;
 
 	// Super twisting algorithm
-	super_twist_vel = vel_est + (lambda * super_twist);
+	super_twist_vel = vel_est + super_twist;
 	st_vel_current = super_twist_vel;
-	f_contribution = lambda * super_twist;
+
 
 	// Position calculations
 	pos_inc = (st_vel_prev + st_vel_current) / 2.0;
@@ -106,13 +106,13 @@ Eigen::MatrixXd chib_filter(const Vector_3 pos_est_current, const Vector_3 pos_t
 	output.row(1) = vel_est_out;
 	output.row(2) = super_twist_vel_out;
 	output.row(3) = pos_est_out;
-	output.row(4) = f_contribution;
+	output.row(4) = relay;
 
 	return output;
 	
 }
 
-double RMS_error(Eigen::MatrixXd pos_est, Eigen::MatrixXd groundtruth_pos_true, vector<int> error_indices) {
+double RMS_error(const Eigen::MatrixXd pos_est, const Eigen::MatrixXd groundtruth_pos_true, const vector<int> error_indices) {
 
 	double pos_err_sum = 0.0, pos_err_RMS;
 
@@ -138,13 +138,15 @@ double RMS_error(Eigen::MatrixXd pos_est, Eigen::MatrixXd groundtruth_pos_true, 
 
 }
 
-double ABS_AVG(Eigen::MatrixXd signal, vector<int> error_indices) {
+double ABS_AVG(const Eigen::MatrixXd signal, const Eigen::MatrixXd vel_est, const vector<int> error_indices) {
 
-	double pos_err_sum = 0.0, pos_err_ABS;
+	double err_metric_sum = 0.0, err_metric_AVG;
 
-	Eigen::MatrixXd signal_raw(1, 3);
-	Eigen::MatrixXd pos_err_abs(1, 3);
-	Eigen::MatrixXd pos_err_rsum(1, 1);
+	Eigen::MatrixXd signal_raw(1, 3), vel_est_abs(1, 3), signal_abs(1, 3);
+	Eigen::MatrixXd denominator(1, 3);
+	Eigen::MatrixXd denominator_inv(1, 3);
+	Eigen::MatrixXd err_metric(1, 3);
+	Eigen::MatrixXd err_metric_rsum(1, 1);
 
 	// Compute RMS error with respect to true position
 
@@ -152,15 +154,40 @@ double ABS_AVG(Eigen::MatrixXd signal, vector<int> error_indices) {
 		int index = int(error_indices[r]);
 		signal_raw = signal.row(index); // This is commented and moved to inside the loop as we dont want to take cost at all time but only when we have a signal coming from the OptiTrack
 		
-		pos_err_abs = signal_raw.cwiseAbs();
-		
-		pos_err_rsum = pos_err_abs.rowwise().sum();
-		pos_err_sum += pos_err_rsum.sum();
+		vel_est_abs = vel_est.row(index).cwiseAbs();
+		signal_abs = signal_raw.cwiseAbs();
+
+		denominator = vel_est_abs + signal_abs;
+
+		//for (int n = 0; n < 3; ++n) { // To avoid division by zero
+
+		//	if (denominator(n) > 0.001) {
+		//		denominator_inv(n) = 1.0 / denominator(n);
+		//	}
+		//	else {
+		//		denominator_inv(n) = 0.0;
+		//	}
+
+		//}
+
+		denominator_inv = denominator.cwiseInverse();
+
+		for (int n = 0; n < 3; ++n) { // To avoid division by zero
+
+			if (isinf(denominator_inv(n))) {
+				denominator_inv(n) = 0.0;
+			}
+
+		}
+
+		err_metric = signal_abs.cwiseProduct(denominator_inv);
+		err_metric_rsum = err_metric.rowwise().sum();
+		err_metric_sum += err_metric_rsum.sum();
 	}
 
-	pos_err_ABS = pos_err_sum / (error_indices.size());
+	err_metric_AVG = err_metric_sum / (error_indices.size());
 
-	return pos_err_ABS;
+	return err_metric_AVG;
 
 }
 
@@ -398,7 +425,8 @@ int main(int argc, char* argv[])
 	out_vel_RMS.close();
 	cout << "VEL RMS Error: " << vel_err_RMS << endl;
 
-	double f_cont_abs = ABS_AVG(f_contribution, error_indices);
+	//double f_cont_abs = ABS_AVG(f_contribution, super_twist_vel, error_indices);
+	double f_cont_abs = ABS_AVG(f_contribution, acc_i, error_indices);
 	ofstream out_Fcont_ABS("F_CONT_ABS.txt");
 	out_Fcont_ABS.precision(9); // number of decimal places to output
 	/*cout << tc.toc() << "ms" << endl;*/
