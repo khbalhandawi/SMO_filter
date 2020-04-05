@@ -1,4 +1,4 @@
-function [RMS] = RMSF_cpp(x,sur,p)
+function [RMS,FCONT] = RMSF_cpp(x,sur,p)
     
     if (nargin==2)
         p = sur;
@@ -6,10 +6,13 @@ function [RMS] = RMSF_cpp(x,sur,p)
     end
     
     %   Scaling the function inputs from unity 
-    n_postrack = p{2};
-    n_memory = p{3};
     
-    y=x;
+    lb = p{2};
+    ub = p{3};
+    n_postrack = p{4};
+    n_memory = p{5};
+    
+    y=scaling(x',lb,ub,2);
         
     c = y(1);
     lambda = y(2);
@@ -20,8 +23,12 @@ function [RMS] = RMSF_cpp(x,sur,p)
         status = system(command); 
 
         if status == 0
-            fileID = fopen('VEL_ERR_RMS.txt','r');
+            % fileID = fopen('F_CONT_ABS.txt','r');
+            fileID = fopen('POS_ERR_RMS.txt','r');
             RMS = fscanf(fileID,'%f');
+            fclose(fileID);
+            fileID = fopen('F_CONT_ABS.txt','r');
+            FCONT = fscanf(fileID,'%f');
             fclose(fileID);
             else
             error('Application did not execute succesfully');
