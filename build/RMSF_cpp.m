@@ -7,15 +7,11 @@ function [RMS,FCONT] = RMSF_cpp(x,sur,p)
     
     %   Scaling the function inputs from unity 
     
-    lb = p{2};
-    ub = p{3};
-    n_postrack = p{4};
-    n_memory = p{5};
+    n_postrack = p{2};
+    n_memory = p{3};
     
-    y=scaling(x',lb,ub,2);
-        
-    c = y(1);
-    lambda = y(2);
+    c = x(1);
+    lambda = x(2);
     
     %   Calling the Attitude estimator
     if ~(sur)

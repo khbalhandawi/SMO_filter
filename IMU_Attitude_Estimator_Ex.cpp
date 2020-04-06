@@ -101,12 +101,23 @@ Eigen::MatrixXd chib_filter(const Vector_3 pos_est_current, const Vector_3 pos_t
 	super_twist_vel_out = super_twist_vel;
 	pos_est_out = pos_est;
 
-	Eigen::MatrixXd output(5, 3);
+	Eigen::MatrixXd output(6, 3);
 	output.row(0) = acc_est_out;
 	output.row(1) = vel_est_out;
 	output.row(2) = super_twist_vel_out;
 	output.row(3) = pos_est_out;
-	output.row(4) = relay;
+	
+	// Acceleration contribution
+	//output.row(4) = relay; // FONCT metric s1
+	//output.row(5) = acc_i_raw; // FONCT metric s2
+
+	// Velocity contribution
+	//output.row(4) = super_twist; // FONCT metric s1
+	//output.row(5) = vel_est; // FONCT metric s2
+
+	// Position error contribution
+	output.row(4) = pos_err; // FONCT metric s1
+	output.row(5) = vel_est; // FONCT metric s2
 
 	return output;
 	
@@ -140,13 +151,10 @@ double RMS_error(const Eigen::MatrixXd pos_est, const Eigen::MatrixXd groundtrut
 
 double ABS_AVG(const Eigen::MatrixXd signal, const Eigen::MatrixXd vel_est, const vector<int> error_indices) {
 
-	double err_metric_sum = 0.0, err_metric_AVG;
+	double err_metric_AVG, numenator_sum = 0.0, denominator_sum = 0.0;
 
 	Eigen::MatrixXd signal_raw(1, 3), vel_est_abs(1, 3), signal_abs(1, 3);
 	Eigen::MatrixXd denominator(1, 3);
-	Eigen::MatrixXd denominator_inv(1, 3);
-	Eigen::MatrixXd err_metric(1, 3);
-	Eigen::MatrixXd err_metric_rsum(1, 1);
 
 	// Compute RMS error with respect to true position
 
@@ -159,33 +167,13 @@ double ABS_AVG(const Eigen::MatrixXd signal, const Eigen::MatrixXd vel_est, cons
 
 		denominator = vel_est_abs + signal_abs;
 
-		//for (int n = 0; n < 3; ++n) { // To avoid division by zero
+		numenator_sum += signal_abs.rowwise().sum().sum();
+		denominator_sum += denominator.rowwise().sum().sum();
 
-		//	if (denominator(n) > 0.001) {
-		//		denominator_inv(n) = 1.0 / denominator(n);
-		//	}
-		//	else {
-		//		denominator_inv(n) = 0.0;
-		//	}
-
-		//}
-
-		denominator_inv = denominator.cwiseInverse();
-
-		for (int n = 0; n < 3; ++n) { // To avoid division by zero
-
-			if (isinf(denominator_inv(n))) {
-				denominator_inv(n) = 0.0;
-			}
-
-		}
-
-		err_metric = signal_abs.cwiseProduct(denominator_inv);
-		err_metric_rsum = err_metric.rowwise().sum();
-		err_metric_sum += err_metric_rsum.sum();
 	}
 
-	err_metric_AVG = err_metric_sum / (error_indices.size());
+	//err_metric_AVG = numenator_sum / denominator_sum;
+	err_metric_AVG = numenator_sum / (3 * error_indices.size());
 
 	return err_metric_AVG;
 
@@ -244,7 +232,8 @@ int main(int argc, char* argv[])
 	Eigen::MatrixXd vel_est(measurements.rows(), 3);
 	Eigen::MatrixXd acc_est(measurements.rows(), 3);
 	Eigen::MatrixXd super_twist_vel(measurements.rows(), 3);
-	Eigen::MatrixXd f_contribution(measurements.rows(), 3);
+	Eigen::MatrixXd f_cont_s1(measurements.rows(), 3);
+	Eigen::MatrixXd f_cont_s2(measurements.rows(), 3);
 	Eigen::MatrixXd mahony_out;
 	Eigen::MatrixXd chib_out, chib_out_j;
 
@@ -267,7 +256,7 @@ int main(int argc, char* argv[])
 	gyro_data = gyroscope.row(i).transpose();//changed trans
 
 	mahony_out = mahony_filter(&mahony_ahrs, acc_data, gyro_data);
-	//acc_i.row(i) = mahony_out.block<1, 3>(0, 0);
+	//acc_i.row(i) = mahony_out.block<1, 3>(0, 0); // turn off mahony filter
 	acc_i.row(i) = acceleration.row(i);
 	Euler.row(i) = mahony_out.block<1, 3>(1, 0);
 	
@@ -295,7 +284,7 @@ int main(int argc, char* argv[])
 		//  Mahony section
 		mahony_out = mahony_filter(&mahony_ahrs, acc_data, gyro_data);
 
-		//acc_i.row(i) = mahony_out.block<1, 3>(0, 0);
+		//acc_i.row(i) = mahony_out.block<1, 3>(0, 0); // turn off mahony filter
 		acc_i.row(i) = acceleration.row(i);
 		Euler.row(i) = mahony_out.block<1, 3>(1, 0);
 
@@ -312,7 +301,9 @@ int main(int argc, char* argv[])
 		vel_est.row(i) = chib_out.block<1, 3>(1, 0);
 		super_twist_vel.row(i) = chib_out.block<1, 3>(2, 0);
 		pos_est.row(i) = chib_out.block<1, 3>(3, 0);
-		f_contribution.row(i) = chib_out.block<1, 3>(4, 0);
+
+		f_cont_s1.row(i) = chib_out.block<1, 3>(4, 0); // FONCT metric s1
+		f_cont_s2.row(i) = chib_out.block<1, 3>(5, 0); // FONCT metric s2
 
 		//calculate the error every IMU iteration
 		error_indices.push_back(i);
@@ -371,7 +362,9 @@ int main(int argc, char* argv[])
 				vel_est.row(j) = chib_out_j.block<1, 3>(1, 0);
 				super_twist_vel.row(j) = chib_out_j.block<1, 3>(2, 0);
 				pos_est.row(j) = chib_out_j.block<1, 3>(3, 0);
-				f_contribution.row(j) = chib_out_j.block<1, 3>(4, 0);
+
+				f_cont_s1.row(j) = chib_out_j.block<1, 3>(4, 0); // FONCT metric s1
+				f_cont_s2.row(j) = chib_out_j.block<1, 3>(5, 0); // FONCT metric s2
 
 				j++;
 
@@ -426,7 +419,7 @@ int main(int argc, char* argv[])
 	cout << "VEL RMS Error: " << vel_err_RMS << endl;
 
 	//double f_cont_abs = ABS_AVG(f_contribution, super_twist_vel, error_indices);
-	double f_cont_abs = ABS_AVG(f_contribution, acc_i, error_indices);
+	double f_cont_abs = ABS_AVG(f_cont_s1, f_cont_s2, error_indices); // |s1| / |s1| + |s2|
 	ofstream out_Fcont_ABS("F_CONT_ABS.txt");
 	out_Fcont_ABS.precision(9); // number of decimal places to output
 	/*cout << tc.toc() << "ms" << endl;*/
@@ -494,6 +487,7 @@ int main(int argc, char* argv[])
 		writeTofile(time_raw, "time_raw.bin");
 		writeTofile(pos_est, "pos_est.bin");
 		writeTofile(super_twist_vel, "vel_est.bin");
+		writeTofile(acc_est, "acc_est.bin");
 		writeTofile(acc_i, "acc_i.bin");
 
 		if (plot_command) {

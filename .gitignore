@@ -12,3 +12,10 @@
 *.txt
 *.pdf
 *.png
+build/Support_functions/export_fig/.ignore/ghostscript.txt
+build/Support_functions/export_fig/.ignore/ghostscript.txt
+*.mat
+*.txt
+.vs/IMU_Attitude_Estimator_Ex/v16/.suo
+*.asv
+build/Support_functions/export_fig/.ignore/ghostscript.txt
