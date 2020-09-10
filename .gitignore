@@ -5,6 +5,7 @@
 .vs/IMU_Attitude_Estimator_Ex/v15/.suo
 *.log
 *.exe
+!sgtelib.exe
 *.pdb
 *.tlog
 *.obj
@@ -19,3 +20,5 @@ build/Support_functions/export_fig/.ignore/ghostscript.txt
 .vs/IMU_Attitude_Estimator_Ex/v16/.suo
 *.asv
 build/Support_functions/export_fig/.ignore/ghostscript.txt
+*.sgt
+build/SGTE_matlab_server/new_data_y

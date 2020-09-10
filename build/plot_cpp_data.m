@@ -11,19 +11,29 @@ clc;                                % clear the command terminal
 % lambda = 2.039450;
 % c = 5.324800;
 
+lambda = 10.0;
+c = 7.0;
+
 % c = 1.44035;
 % lambda = 1.25285;
 
-lambda = 2;
-c = 15;
+% lambda = 0.2174;
+% c = 6.377;
+
+ll_c = 0.0; ul_c = 20;
+ll_lambda = 0.0; ul_lambda = 5.0;
+lb = [ll_c ll_lambda]; % lower bounds for lambda , C
+ub = [ul_c ul_lambda]; % upper bounds for lambda , C
 
 n_delay = 20;
 n_memory = 30 ; % how many anti-delay units do you want
 n_postrack = 0;
 
 X = [c, lambda];
-param = {1,n_postrack,n_memory};
-[Err,Font] = RMSF_cpp(X',param);
+X = scaling(X',lb,ub,1);
+
+param = {1,lb,ub,n_postrack,n_memory};
+[Err,v_Err,Font] = RMSF_cpp(X',param);
 
 export_fig = false;
 
